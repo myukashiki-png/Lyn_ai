@@ -1,0 +1,14 @@
+high_risk:
+  - delete
+  - hapus
+  - bayar
+  - transfer
+  - kirim uang
+  - format
+  - overwrite
+
+medium_risk:
+  - otomatis
+  - jadwalkan
+  - jalankan
+  - install
