@@ -10,8 +10,10 @@ from vosk import Model, KaldiRecognizer
 from memory.memory_manager import (
     add_short_term,
     get_short_term,
-    add_fact
-)
+    add_fact)
+from core_ai.risk_classifier import classify_risk
+from core_ai.reflection import self_reflect
+from core_ai.answer_refiner import refine_answer
 from mode_manager import detect_mode, load_mode
 
 # ================= CONFIG =================
@@ -20,7 +22,17 @@ KEYWORD_PATH = "wakeword/hey-lyn.ppn"
 MODEL_PATH = "wakeword/porcupine_params.pv"
 OLLAMA_MODEL = "phi3"
 VOSK_MODEL_PATH = "vosk_model"
+answer = generate_answer(command)
 
+risk = classify_risk(command)
+
+if risk in ["medium", "high"]:
+    reflection = self_reflect(answer, command)
+
+    if "improve: ya" in reflection.lower():
+        answer = refine_answer(answer, reflection)
+
+speak(answer)
 # ================= TTS =================
 engine = pyttsx3.init()
 engine.setProperty("rate", 155)
