@@ -20,6 +20,12 @@ class ExecutionResult:
         )
 from agentic.execution_result import ExecutionResult
 
+class ExecutionResult:
+    def __init__(self, success, reason=None, recoverable=T>
+        self.success = success
+        self.reason = reason
+        self.recoverable = recoverable
+
 def evaluate(step, output):
     if output is None:
         return ExecutionResult(
