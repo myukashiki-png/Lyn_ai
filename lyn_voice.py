@@ -1,3 +1,4 @@
+import os
 import pvporcupine
 import pyaudio
 import struct
@@ -10,39 +11,17 @@ from vosk import Model, KaldiRecognizer
 from memory.memory_manager import (
     add_short_term,
     get_short_term,
-    add_fact)
+    add_fact
+)
 from core_ai.risk_classifier import classify_risk
 from core_ai.reflection import self_reflect
 from core_ai.answer_refiner import refine_answer
 from mode_manager import detect_mode, load_mode
 from memory.memory_policy import should_store
 from memory.vector_store import VectorStore
-
-memory_store = VectorStore()
-
-if should_store(command):
-    memory_store.add(command)
 from skills.skill_router import route_skill
-
-skill = route_skill(command)
-
-if skill:
-    answer = skill(command)
-else:
-    answer = generate_llm_answer(command)
 from safety.governor import SafetyGovernor
 from safety.confirmations import require_confirmation
-
-governor = SafetyGovernor()
-
-risk = governor.check(command)
-
-if not require_confirmation(risk):
-    speak("Perintah dibatalkan.")
-    return
-def process_command(command: str) -> str:
-    # intent → safety → skill → llm
-    return handle_with_v24_pipeline(command)
 
 # ================= CONFIG =================
 ACCESS_KEY = "ISI_ACCESS_KEY_PICOVOICE"  # Ganti dengan access key Picovoice Anda
@@ -50,28 +29,20 @@ KEYWORD_PATH = "wakeword/hey-lyn.ppn"
 MODEL_PATH = "wakeword/porcupine_params.pv"
 OLLAMA_MODEL = "phi3"
 VOSK_MODEL_PATH = "vosk_model"
-answer = generate_answer(command)
 
-risk = classify_risk(command)
+# ================= INITIALIZATION =================
+memory_store = VectorStore()
+governor = SafetyGovernor()
 
-if risk in ["medium", "high"]:
-    reflection = self_reflect(answer, command)
-
-    if "improve: ya" in reflection.lower():
-        answer = refine_answer(answer, reflection)
-
-speak(answer)
-# ================= TTS =================
+# TTS
 engine = pyttsx3.init()
 engine.setProperty("rate", 155)
 
 def speak(text):
     engine.say(text)
     engine.runAndWait()
-def speak(text):
-    engine.say(text)
-    engine.runAndWait()
-# ================= VOSK STT =================
+
+# VOSK STT
 vosk_model = Model(VOSK_MODEL_PATH)
 recognizer = KaldiRecognizer(vosk_model, 16000)
 
@@ -93,7 +64,7 @@ def listen_command():
 
     return ""
 
-# ================= OLLAMA =================
+# OLLAMA
 def ask_ollama(prompt):
     r = requests.post(
         "http://localhost:11434/api/generate",
@@ -105,6 +76,40 @@ def ask_ollama(prompt):
         timeout=120
     )
     return r.json()["response"]
+
+# Generate LLM answer (placeholder, assuming it's defined elsewhere or use ask_ollama)
+def generate_llm_answer(command):
+    return ask_ollama(command)
+
+# Process command with pipeline (simplified)
+def process_command(command: str) -> str:
+    # Check memory policy
+    if should_store(command):
+        memory_store.add(command)
+    
+    # Route to skill
+    skill = route_skill(command)
+    if skill:
+        answer = skill(command)
+    else:
+        answer = generate_llm_answer(command)
+    
+    # Risk classification and refinement
+    risk = classify_risk(command)
+    if risk in ["medium", "high"]:
+        reflection = self_reflect(answer, command)
+        if "improve: ya" in reflection.lower():
+            answer = refine_answer(answer, reflection)
+    
+    return answer
+
+# Shutdown function
+def shutdown():
+    print("Shutting down...")
+    stream.close()
+    pa.terminate()
+    porcupine.delete()
+    exit(0)
 
 # ================= PORCUPINE =================
 porcupine = pvporcupine.create(
@@ -145,62 +150,27 @@ try:
                 time.sleep(1)
                 continue
 
-            # Dapatkan konteks short-term memory
-            context = get_short_term()
-            memory_prompt = ""
-            for c in context:
-                memory_prompt += f"User: {c['user']}\nAI: {c['ai']}\n"
+            # Safety check
+            risk = governor.check(command)
+            if not require_confirmation(risk):
+                speak("Perintah dibatalkan.")
+                continue
 
-            # Deteksi mode berdasarkan perintah
-            mode_name = detect_mode(command)
-            mode = load_mode(mode_name)
-
-            # Jika mode memiliki system_prompt, gunakan itu; jika tidak, gunakan prompt default
-            if mode and 'system_prompt' in mode:
-                full_prompt = f"""
-{mode['system_prompt']}
-
-Konteks percakapan:
-{memory_prompt}
-
-Permintaan user:
-{command}
-
-Jawab sesuai peran kamu.
-"""
-            else:
-                # Prompt default jika tidak ada mode
-                full_prompt = f"""
-Konteks sebelumnya:
-{memory_prompt}
-
-Perintah user sekarang:
-{command}
-
-Jawab dengan singkat, jelas, dan praktis.
-"""
-
-            # Jika ada fungsi run_agents dan synthesize, gunakan; jika tidak, langsung ke Ollama
-            # Asumsi: Jika mode memiliki 'agents', jalankan agents; jika tidak, langsung ask_ollama
-            if mode and 'agents' in mode:
-                # Asumsi fungsi run_agents dan synthesize ada di mode_manager atau didefinisikan
-                thoughts = run_agents(command, mode)
-                response = synthesize(thoughts, command)
-            else:
-                response = ask_ollama(full_prompt)
+            # Process command
+            response = process_command(command)
 
             print("lyn:", response)
             speak(response)
 
-            # Tambahkan ke short-term memory
+            # Add to short-term memory
             add_short_term(command, response)
+
+        # Check for shutdown file
+        if os.path.exists("STOP"):
+            shutdown()
 
 except KeyboardInterrupt:
     print("Shutdown")
 
 finally:
-    stream.close()
-    pa.terminate()
-    porcupine.delete()
-if os.path.exists("STOP"):
     shutdown()
