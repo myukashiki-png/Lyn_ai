@@ -1,22 +1,34 @@
 import speech_recognition as sr
 import pyttsx3
 import requests
+import sys  # Added for sys.exit
 
 engine = pyttsx3.init()
 engine.setProperty("rate", 160)
 
 def speak(text):
-    engine.say(text)
-    engine.runAndWait()
+    try:
+        engine.say(text)
+        engine.runAndWait()
+    except Exception as e:
+        print(f"Error in TTS: {e}")
 
 def listen():
     r = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Mendengarkan...")
-        audio = r.listen(source)
     try:
+        with sr.Microphone() as source:
+            print("Mendengarkan...")
+            r.adjust_for_ambient_noise(source, duration=0.5)  # Added to reduce noise
+            audio = r.listen(source, timeout=5, phrase_time_limit=10)  # Added timeouts
         return r.recognize_google(audio, language="id-ID")
-    except:
+    except sr.UnknownValueError:
+        print("Tidak dapat mengenali suara.")
+        return ""
+    except sr.RequestError as e:
+        print(f"Error dengan Google Speech Recognition: {e}")
+        return ""
+    except Exception as e:
+        print(f"Error dalam mendengarkan: {e}")
         return ""
 
 def ask_ollama(prompt):
@@ -26,8 +38,16 @@ def ask_ollama(prompt):
         "prompt": prompt,
         "stream": False
     }
-    r = requests.post(url, json=payload, timeout=120)
-    return r.json()["response"]
+    try:
+        r = requests.post(url, json=payload, timeout=120)
+        r.raise_for_status()  # Raise error for bad status codes
+        return r.json()["response"]
+    except requests.exceptions.RequestException as e:
+        print(f"Error dalam menghubungi Ollama: {e}")
+        return "Maaf, saya tidak dapat memproses permintaan saat ini."
+    except KeyError:
+        print("Error: Respons dari Ollama tidak valid.")
+        return "Maaf, terjadi kesalahan dalam respons."
 
 if __name__ == "__main__":
     speak("lyn siap membantu.")
@@ -45,4 +65,3 @@ if __name__ == "__main__":
         reply = ask_ollama(text)
         print("lyn:", reply)
         speak(reply)
-# test Mon Feb  2 02:38:05 WIB 2026
