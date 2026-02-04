@@ -7,6 +7,15 @@ def create_plan(goal, memory=None):
             prompt += f"- Step {f['step']}: {f['reason']}\n"
 
     return generate_plan(prompt)
+prompt = f"Goal: {goal}\n"
+
+if memory:
+    context = memory.planner_context()
+    if context:
+        prompt += "\nContext from previous execution:\n"
+        prompt += context + "\n"
+
+prompt += "\nCreate the next best plan."
 def plan_task(goal: str) -> list[str]:
     """
     Gunakan LLM hanya untuk MEMECAH tugas,
