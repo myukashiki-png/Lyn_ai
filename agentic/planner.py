@@ -1,3 +1,12 @@
+def create_plan(goal, memory=None):
+    prompt = f"Goal: {goal}"
+
+    if memory and memory.failures:
+        prompt += "\nPrevious failures:\n"
+        for f in memory.failures:
+            prompt += f"- Step {f['step']}: {f['reason']}\n"
+
+    return generate_plan(prompt)
 def plan_task(goal: str) -> list[str]:
     """
     Gunakan LLM hanya untuk MEMECAH tugas,
