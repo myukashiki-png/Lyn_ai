@@ -18,6 +18,11 @@ class WorkingMemory:
             "recoverable": result.recoverable,
             "severity": getattr(result, "severity", "normal")
         })
+class WorkingMemory:
+    def __init__(self):
+        self.steps_taken = []
+        self.failures = []
+        self.assumptions = []
 
     def add_note(self, note: str):
         self.notes.append(note)

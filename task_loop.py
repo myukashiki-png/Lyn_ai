@@ -1,5 +1,6 @@
 MAX_ITERATIONS = 10
 
+
 def run_task(goal):
     memory = WorkingMemory()
     plan = planner.create_plan(goal, memory)
