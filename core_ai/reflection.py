@@ -1,5 +1,20 @@
 from core_ai.ollama_client import ask_ollama
 
+def reflect(task, result, evaluation, memory_store):
+    if evaluation["verdict"] == "REJECT":
+        memory_store.store(
+            category="mistake",
+            content=f"Task '{task}' gagal karena {evaluation['reason']}",
+            confidence=0.9
+        )
+
+    if result.success:
+        memory_store.store(
+            category="preference",
+            content=f"Pendekatan '{result.method}' berhasil",
+            confidence=0.6
+        )
+
 def self_reflect(answer: str, command: str) -> str:
     prompt = f"""
     Kamu adalah modul refleksi internal lyn.

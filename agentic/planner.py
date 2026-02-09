@@ -1,3 +1,15 @@
+def plan(task, memory_store):
+    memories = memory_store.recall(
+        categories=["goal", "schedule", "preference"]
+    )
+
+    context = summarize(memories)
+
+    plan = generate_plan(task, context)
+
+    return plan
+def plan(task, memory, urgency):
+    ...
 def create_plan(goal, memory=None):
     prompt = f"Goal: {goal}"
 

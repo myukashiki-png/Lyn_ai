@@ -1,5 +1,9 @@
 from skills import SKILL_REGISTRY
 
+result = executor.simulate(plan)
+if result.safe:
+    executor.commit()
+
 def execute_step(step: str) -> str:
     for skill in SKILL_REGISTRY:
         if skill.can_handle(step):
