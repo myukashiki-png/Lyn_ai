@@ -65,3 +65,4 @@ if __name__ == "__main__":
         reply = ask_ollama(text)
         print("lyn:", reply)
         speak(reply)
+
